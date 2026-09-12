@@ -1,0 +1,9 @@
+# MSVC build output
+*.exe
+*.obj
+*.pdb
+*.ilk
+*.idb
+
+# Visual Studio / VS Code local state
+.vs/
