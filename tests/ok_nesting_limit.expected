@@ -1,0 +1,5 @@
+Program
+  Function int main()
+    Block
+      Return
+        Int 1

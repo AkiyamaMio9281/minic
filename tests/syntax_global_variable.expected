@@ -1,0 +1,1 @@
+syntax error: line 1: global variable 'counter' is not supported; declare it inside a function

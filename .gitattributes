@@ -1,0 +1,6 @@
+# minic.exe writes CRLF on Windows, and fc compares byte for byte,
+# so expected output is checked out with CRLF regardless of settings.
+*.expected text eol=crlf
+
+# cmd.exe misreads some batch constructs in LF-only files.
+*.bat text eol=crlf

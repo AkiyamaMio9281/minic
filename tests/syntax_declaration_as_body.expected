@@ -1,0 +1,1 @@
+syntax error: line 4: a declaration cannot be the body of 'if', 'else' or 'while'; wrap it in { }

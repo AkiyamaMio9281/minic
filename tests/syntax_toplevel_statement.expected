@@ -1,0 +1,1 @@
+syntax error: line 5: expected a function definition starting with 'int' or 'void', found 'return'

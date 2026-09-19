@@ -1,81 +1,26 @@
+#include "ast.hpp"
+#include "error.hpp"
 #include "lexer.hpp"
+#include "parser.hpp"
 
-#include <exception>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <utility>
 
 namespace {
 
-const char* tokenTypeToString(TokenType type) {
-    switch (type) {
-        case TokenType::KwInt:        return "KwInt";
-        case TokenType::KwVoid:       return "KwVoid";
-        case TokenType::KwReturn:     return "KwReturn";
-        case TokenType::KwIf:         return "KwIf";
-        case TokenType::KwElse:       return "KwElse";
-        case TokenType::KwWhile:      return "KwWhile";
+enum class Mode {
+    Tokens,
+    Ast,
+};
 
-        case TokenType::Identifier:   return "Identifier";
-        case TokenType::Integer:      return "Integer";
-
-        case TokenType::Plus:         return "Plus";
-        case TokenType::Minus:        return "Minus";
-        case TokenType::Star:         return "Star";
-        case TokenType::Slash:        return "Slash";
-        case TokenType::Percent:      return "Percent";
-
-        case TokenType::Assign:       return "Assign";
-        case TokenType::EqualEqual:   return "EqualEqual";
-        case TokenType::NotEqual:     return "NotEqual";
-        case TokenType::Less:         return "Less";
-        case TokenType::LessEqual:    return "LessEqual";
-        case TokenType::Greater:      return "Greater";
-        case TokenType::GreaterEqual: return "GreaterEqual";
-
-        case TokenType::AndAnd:       return "AndAnd";
-        case TokenType::OrOr:         return "OrOr";
-        case TokenType::Not:          return "Not";
-
-        case TokenType::LParen:       return "LParen";
-        case TokenType::RParen:       return "RParen";
-        case TokenType::LBrace:       return "LBrace";
-        case TokenType::RBrace:       return "RBrace";
-        case TokenType::Semicolon:    return "Semicolon";
-        case TokenType::Comma:        return "Comma";
-
-        case TokenType::EndOfFile:    return "EndOfFile";
-    }
-
-    return "Unknown";
-}
-
-// Used when no source file is given on the command line.
-const char* const DEMO_SOURCE = R"(
-int gcd(int a, int b) {
-    while (b != 0) {
-        int t = a % b;
-        a = b;
-        b = t;
-    }
-
-    return a;
-}
-
-int main() {
-    int x = 24;
-    int y = 18;
-
-    /* Greatest common divisor, unless the two are equal. */
-    if (x >= y && !(x == y)) {
-        return gcd(x, y);
-    }
-
-    return 0;
-}
-)";
+const char* const USAGE =
+    "usage: minic [--tokens | --ast] <file.c>\n"
+    "  --tokens   print the token stream\n"
+    "  --ast      print the syntax tree (default)\n";
 
 bool readFile(const char* path, std::string& out) {
     std::ifstream file(path, std::ios::binary);
@@ -91,46 +36,75 @@ bool readFile(const char* path, std::string& out) {
     return true;
 }
 
+void dumpTokens(Lexer& lexer) {
+    while (true) {
+        const Token token = lexer.nextToken();
+
+        std::cout
+            << std::setw(4) << token.line
+            << "  "
+            << std::left << std::setw(13)
+            << tokenTypeName(token.type)
+            << std::right
+            << '"' << token.text << '"';
+
+        if (token.type == TokenType::Integer) {
+            std::cout << "  value=" << token.value;
+        }
+
+        std::cout << '\n';
+
+        if (token.type == TokenType::EndOfFile) {
+            return;
+        }
+    }
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
-    std::string source;
+    Mode mode = Mode::Ast;
+    const char* path = nullptr;
 
-    if (argc > 1) {
-        if (!readFile(argv[1], source)) {
-            std::cerr << "cannot open file: " << argv[1] << "\n";
-            return 1;
+    for (int i = 1; i < argc; ++i) {
+        const std::string arg = argv[i];
+
+        if (arg == "--tokens") {
+            mode = Mode::Tokens;
+        } else if (arg == "--ast") {
+            mode = Mode::Ast;
+        } else if (arg.empty() || arg[0] == '-' || path != nullptr) {
+            std::cerr << USAGE;
+            return 2;
+        } else {
+            path = argv[i];
         }
-    } else {
-        source = DEMO_SOURCE;
     }
 
-    Lexer lexer(source);
+    if (path == nullptr) {
+        std::cerr << USAGE;
+        return 2;
+    }
+
+    std::string source;
+
+    if (!readFile(path, source)) {
+        std::cerr << "cannot open file: " << path << "\n";
+        return 1;
+    }
 
     try {
-        while (true) {
-            const Token token = lexer.nextToken();
+        Lexer lexer(std::move(source));
 
-            std::cout
-                << std::setw(4) << token.line
-                << "  "
-                << std::left << std::setw(13)
-                << tokenTypeToString(token.type)
-                << std::right
-                << '"' << token.text << '"';
-
-            if (token.type == TokenType::Integer) {
-                std::cout << "  value=" << token.value;
-            }
-
-            std::cout << '\n';
-
-            if (token.type == TokenType::EndOfFile) {
-                break;
-            }
+        if (mode == Mode::Tokens) {
+            dumpTokens(lexer);
+        } else {
+            Parser parser(lexer);
+            const Program program = parser.parseProgram();
+            printAst(program, std::cout);
         }
-    } catch (const std::exception& e) {
-        std::cerr << "lex error: " << e.what() << "\n";
+    } catch (const CompileError& e) {
+        std::cerr << e.phase() << " error: " << e.what() << "\n";
         return 1;
     }
 

@@ -28,7 +28,12 @@ echo Using %VSPATH%
 call "%VSPATH%\VC\Auxiliary\Build\vcvars64.bat" >nul
 if errorlevel 1 exit /b 1
 
-cl /nologo /std:c++17 /EHsc /W4 /I src /Fe:minic.exe src/main.cpp src/lexer.cpp
+rem Every .cpp under src is part of the compiler, so new files need no edit here.
+rem /STACK reserves 64 MB of address space for the stack; pages are only
+rem committed when touched. The parser caps nesting on its own, but a flat
+rem chain like 1+1+...+1 still builds a deep tree that later phases walk
+rem recursively, and the default 1 MB overflows at about 4000 terms.
+cl /nologo /std:c++17 /EHsc /W4 /I src /Fe:minic.exe src\*.cpp /link /STACK:67108864
 if errorlevel 1 exit /b 1
 
 echo Built minic.exe

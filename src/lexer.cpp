@@ -1,7 +1,7 @@
 #include "lexer.hpp"
 
 #include <cctype>
-#include <cstdlib>
+#include <climits>
 #include <utility>
 
 namespace {
@@ -86,13 +86,11 @@ Token Lexer::make(TokenType type, std::string text) const {
     return token;
 }
 
-std::runtime_error Lexer::errorAt(int line, const std::string& message) const {
-    return std::runtime_error(
-        "line " + std::to_string(line) + ": " + message
-    );
+CompileError Lexer::errorAt(int line, const std::string& message) const {
+    return CompileError("lex", line, message);
 }
 
-std::runtime_error Lexer::error(const std::string& message) const {
+CompileError Lexer::error(const std::string& message) const {
     return errorAt(line_, message);
 }
 
@@ -151,8 +149,30 @@ Token Lexer::lexNumber() {
 
     std::string text = source_.substr(start, pos_ - start);
 
-    Token token = make(TokenType::Integer, text);
-    token.value = std::strtoll(text.c_str(), nullptr, 10);
+    // In C a leading 0 means octal, so 010 is 8. MiniC has no octal, and
+    // quietly reading 010 as ten would disagree with every C compiler.
+    if (text.size() > 1 && text[0] == '0') {
+        throw error(
+            "integer literal '" + text + "' has a leading zero; octal is not supported"
+        );
+    }
+
+    // int is 32 bits. Checking after every digit stops long before the
+    // accumulator itself could overflow, however long the literal is.
+    long long value = 0;
+
+    for (const char digit : text) {
+        value = value * 10 + (digit - '0');
+
+        if (value > INT_MAX) {
+            throw error(
+                "integer literal '" + text + "' does not fit in int (max 2147483647)"
+            );
+        }
+    }
+
+    Token token = make(TokenType::Integer, std::move(text));
+    token.value = static_cast<int>(value);
 
     return token;
 }

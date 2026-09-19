@@ -1,0 +1,64 @@
+Program
+  Function int main()
+    Block
+      VarDecl a
+        Int 1
+      VarDecl b
+        Int 2
+      VarDecl c
+        Int 3
+      ExprStmt
+        Assign a
+          Binary -
+            Binary +
+              Int 1
+              Binary *
+                Int 2
+                Int 3
+            Int 4
+      ExprStmt
+        Assign b
+          Binary %
+            Binary /
+              Int 8
+              Int 2
+            Int 3
+      ExprStmt
+        Assign c
+          Binary *
+            Binary +
+              Int 1
+              Int 2
+            Int 3
+      ExprStmt
+        Assign a
+          Assign b
+            Assign c
+              Int 0
+      ExprStmt
+        Assign c
+          Binary *
+            Unary -
+              Var a
+            Unary !
+              Var b
+      Return
+        Binary ||
+          Binary &&
+            Binary <
+              Var a
+              Var b
+            Binary <=
+              Var b
+              Var c
+          Binary &&
+            Binary !=
+              Binary ==
+                Var a
+                Var c
+              Int 0
+            Binary >
+              Unary -
+                Unary -
+                  Var a
+              Int 0

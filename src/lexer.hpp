@@ -1,9 +1,9 @@
 #pragma once
 
 #include <cstddef>
-#include <stdexcept>
 #include <string>
 
+#include "error.hpp"
 #include "token.hpp"
 
 class Lexer {
@@ -11,7 +11,7 @@ public:
     explicit Lexer(std::string source);
 
     // Produces the next token. Returns EndOfFile forever once the
-    // input is exhausted. Throws std::runtime_error on a lex error.
+    // input is exhausted. Throws CompileError on a lex error.
     Token nextToken();
 
 private:
@@ -26,8 +26,8 @@ private:
     Token lexIdentifier();
 
     Token make(TokenType type, std::string text) const;
-    std::runtime_error error(const std::string& message) const;
-    std::runtime_error errorAt(int line, const std::string& message) const;
+    CompileError error(const std::string& message) const;
+    CompileError errorAt(int line, const std::string& message) const;
 
     std::string source_;
     std::size_t pos_ = 0;

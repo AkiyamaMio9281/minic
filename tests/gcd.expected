@@ -1,0 +1,42 @@
+Program
+  Function int gcd(a, b)
+    Block
+      While
+        Binary !=
+          Var b
+          Int 0
+        Block
+          VarDecl t
+            Binary %
+              Var a
+              Var b
+          ExprStmt
+            Assign a
+              Var b
+          ExprStmt
+            Assign b
+              Var t
+      Return
+        Var a
+  Function int main()
+    Block
+      VarDecl x
+        Int 24
+      VarDecl y
+        Int 18
+      If
+        Binary &&
+          Binary >=
+            Var x
+            Var y
+          Unary !
+            Binary ==
+              Var x
+              Var y
+        Block
+          Return
+            Call gcd
+              Var x
+              Var y
+      Return
+        Int 0

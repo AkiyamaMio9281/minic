@@ -1,0 +1,75 @@
+Program
+  Function void countdown(n)
+    Block
+      While
+        Binary >
+          Var n
+          Int 0
+        Block
+          ExprStmt
+            Assign n
+              Binary -
+                Var n
+                Int 1
+      Return
+  Function int sign(x)
+    Block
+      If
+        Binary >
+          Var x
+          Int 0
+        Return
+          Int 1
+        Else
+          If
+            Binary <
+              Var x
+              Int 0
+            Return
+              Unary -
+                Int 1
+            Else
+              Return
+                Int 0
+  Function int dangling(a, b)
+    Block
+      If
+        Var a
+        If
+          Var b
+          Return
+            Int 1
+          Else
+            Return
+              Int 2
+      Return
+        Int 3
+  Function int main()
+    Block
+      VarDecl i
+        Int 0
+      Empty
+      Block
+        VarDecl i
+          Int 5
+        Block
+      While
+        Binary <
+          Var i
+          Int 3
+        ExprStmt
+          Assign i
+            Binary +
+              Var i
+              Int 1
+      ExprStmt
+        Call countdown
+          Binary +
+            Call sign
+              Unary -
+                Int 4
+            Call dangling
+              Int 1
+              Int 0
+      Return
+        Var i

@@ -1,0 +1,43 @@
+Program
+  Function int fib(n)
+    Block
+      If
+        Binary <
+          Var n
+          Int 2
+        Block
+          Return
+            Var n
+      Return
+        Binary +
+          Call fib
+            Binary -
+              Var n
+              Int 1
+          Call fib
+            Binary -
+              Var n
+              Int 2
+  Function int add3(a, b, c)
+    Block
+      Return
+        Binary +
+          Binary +
+            Var a
+            Var b
+          Var c
+  Function void noop()
+    Block
+  Function int main()
+    Block
+      ExprStmt
+        Call noop
+      Return
+        Call add3
+          Call fib
+            Int 10
+          Call add3
+            Int 1
+            Int 2
+            Int 3
+          Int 4

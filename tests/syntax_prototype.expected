@@ -1,0 +1,1 @@
+syntax error: line 1: function 'helper' has no body; MiniC has no prototypes because a function can be called before its definition

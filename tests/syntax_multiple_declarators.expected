@@ -1,0 +1,1 @@
+syntax error: line 2: declare one variable per statement; 'int a, b;' is not supported
