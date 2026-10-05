@@ -1,42 +1,42 @@
 Program
-  Function int fib(n)
+  Function int fib(n)  [locals 1]
     Block
       If
         Binary <
-          Var n
+          Var n  [slot 0]
           Int 2
         Block
           Return
-            Var n
+            Var n  [slot 0]
       Return
         Binary +
-          Call fib
+          Call fib  [fn 0]
             Binary -
-              Var n
+              Var n  [slot 0]
               Int 1
-          Call fib
+          Call fib  [fn 0]
             Binary -
-              Var n
+              Var n  [slot 0]
               Int 2
-  Function int add3(a, b, c)
+  Function int add3(a, b, c)  [locals 3]
     Block
       Return
         Binary +
           Binary +
-            Var a
-            Var b
-          Var c
-  Function void noop()
+            Var a  [slot 0]
+            Var b  [slot 1]
+          Var c  [slot 2]
+  Function void noop()  [locals 0]
     Block
-  Function int main()
+  Function int main()  [locals 0]
     Block
       ExprStmt
-        Call noop
+        Call noop  [fn 2]
       Return
-        Call add3
-          Call fib
+        Call add3  [fn 1]
+          Call fib  [fn 0]
             Int 10
-          Call add3
+          Call add3  [fn 1]
             Int 1
             Int 2
             Int 3

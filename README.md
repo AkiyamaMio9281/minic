@@ -9,7 +9,7 @@
 
 - [x] **词法分析器** Lexer：把源码切成 token 流
 - [x] **语法分析器** Parser：递归下降，产生 AST
-- [ ] 语义分析：符号表、作用域、类型与实参个数检查
+- [x] **语义分析**：符号表、作用域、名字解析与各项检查
 - [ ] 代码生成：AST → 栈式虚拟机字节码
 - [ ] 虚拟机：执行字节码
 
@@ -24,24 +24,26 @@ minic.exe tests\gcd.c
 ```
 
 ```
-usage: minic [--tokens | --ast] <file.c>
+usage: minic [--tokens | --ast | --check] <file.c>
   --tokens   print the token stream
-  --ast      print the syntax tree (default)
+  --ast      parse, then print the syntax tree
+  --check    also run semantic analysis, then print the tree with the
+             slots and call targets it resolved (default)
 ```
 
-默认输出语法树，每层缩进两个空格：
+默认输出语法树，每层缩进两个空格。方括号里是语义分析的结果：变量解析到了哪个局部变量槽位，函数调用指向第几个函数，以及每个函数的调用帧需要多少槽位。
 
 ```
 Program
-  Function int gcd(a, b)
+  Function int gcd(a, b)  [locals 3]
     Block
       While
         Binary !=
-          Var b
+          Var b  [slot 1]
           Int 0
 ```
 
-`--tokens` 输出 token 表，三列分别是行号、token 类型、原文。
+`--ast` 只做到语法分析，因此不带方括号标注，可以用来单独观察语法树。`--tokens` 输出 token 表，三列分别是行号、token 类型、原文。
 
 出错时输出一行到 stderr，退出码为 1，格式是 `<阶段> error: line <行号>: <说明>`：
 
@@ -60,9 +62,10 @@ test.bat update   用当前输出重写所有 .expected，之后用 git diff 检
 
 | 前缀 | 内容 |
 | --- | --- |
-| `ok_` | 合法程序，预期输出是语法树 |
+| `ok_` | 合法程序，预期输出是带标注的语法树 |
 | `lex_` | 词法错误，预期输出是报错信息 |
 | `syntax_` | 语法错误，预期输出是报错信息 |
+| `semantic_` | 语义错误，预期输出是报错信息 |
 
 `gcd.c` 是示例程序，同样有预期输出。
 
@@ -128,6 +131,27 @@ args        = expr ("," expr)*
 
 数组、指针、`char`、字符串、`struct`、`for`、全局变量留到后续阶段。
 
+### 语义检查
+
+语法树建好之后，语义分析遍历一遍，解析每个名字并检查下面这些规则。任何一条不满足就报错，错误信息同样带行号。
+
+| 检查 | 例子 |
+| --- | --- |
+| 必须有 `main`，返回 `int` 且没有参数 | `void main()` 报错 |
+| 变量先声明后使用 | `return y;` 而 y 没声明 |
+| 同一作用域里不能重复声明 | `int x; int x;` |
+| 参数和函数体最外层是同一个作用域 | `int f(int a) { int a; }` 报错，和 C 一致 |
+| 变量不能出现在自己的初始化式里 | `int x = x + 1;` |
+| 变量名不能和函数名相同 | 函数 `f` 存在时再写 `int f;` |
+| 函数不能重复定义 | 两个 `int f()` |
+| 调用的函数必须存在，实参个数必须对上 | `add(1)` 而 `add` 有两个参数 |
+| `void` 函数的返回值不能参与表达式 | `int x = noop();` |
+| `return` 带不带值要和函数返回类型一致 | `int f() { return; }` 报错 |
+
+内层作用域可以遮蔽外层的同名变量，这是合法的，`tests/ok_scoping.c` 专门测这一点。
+
+分析的另一半工作是为代码生成做准备：每个变量解析到一个局部变量槽位，每个调用解析到目标函数的下标，每个函数记下调用帧需要的槽位数。相邻的语句块会复用槽位，所以槽位数是峰值，不是声明的个数。函数名在分析函数体之前先收集一遍，所以函数可以在定义之前被调用，互相递归也没问题。
+
 ### 限制
 
 嵌套最多 256 层，括号、函数调用参数、一元运算符、连续赋值、语句块、if/else/while 的分支体都算一层。超过会报语法错误，而不是让递归撑爆栈。256 和 clang 默认的括号嵌套上限相同，手写代码不会碰到。
@@ -142,6 +166,7 @@ args        = expr ("," expr)*
 | `src/lexer.hpp` / `src/lexer.cpp` | 手写扫描器，单字符前看，支持 `//` 与 `/* */` 注释 |
 | `src/ast.hpp` / `src/ast.cpp` | AST 节点定义与缩进打印 |
 | `src/parser.hpp` / `src/parser.cpp` | 递归下降语法分析器 |
+| `src/semantic.hpp` / `src/semantic.cpp` | 语义分析：作用域、名字解析、槽位分配 |
 | `src/error.hpp` | 各阶段共用的 `CompileError`，带阶段名和行号 |
 | `src/main.cpp` | 命令行入口 |
 | `build.bat` / `test.bat` | 构建与回归测试 |

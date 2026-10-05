@@ -1,42 +1,42 @@
 Program
-  Function int gcd(a, b)
+  Function int gcd(a, b)  [locals 3]
     Block
       While
         Binary !=
-          Var b
+          Var b  [slot 1]
           Int 0
         Block
-          VarDecl t
+          VarDecl t  [slot 2]
             Binary %
-              Var a
-              Var b
+              Var a  [slot 0]
+              Var b  [slot 1]
           ExprStmt
-            Assign a
-              Var b
+            Assign a  [slot 0]
+              Var b  [slot 1]
           ExprStmt
-            Assign b
-              Var t
+            Assign b  [slot 1]
+              Var t  [slot 2]
       Return
-        Var a
-  Function int main()
+        Var a  [slot 0]
+  Function int main()  [locals 2]
     Block
-      VarDecl x
+      VarDecl x  [slot 0]
         Int 24
-      VarDecl y
+      VarDecl y  [slot 1]
         Int 18
       If
         Binary &&
           Binary >=
-            Var x
-            Var y
+            Var x  [slot 0]
+            Var y  [slot 1]
           Unary !
             Binary ==
-              Var x
-              Var y
+              Var x  [slot 0]
+              Var y  [slot 1]
         Block
           Return
-            Call gcd
-              Var x
-              Var y
+            Call gcd  [fn 0]
+              Var x  [slot 0]
+              Var y  [slot 1]
       Return
         Int 0

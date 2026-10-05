@@ -1,0 +1,38 @@
+Program
+  Function int outer(a)  [locals 4]
+    Block
+      VarDecl b  [slot 1]
+        Var a  [slot 0]
+      Block
+        VarDecl c  [slot 2]
+          Int 1
+        VarDecl d  [slot 3]
+          Int 2
+        ExprStmt
+          Assign b  [slot 1]
+            Binary +
+              Var c  [slot 2]
+              Var d  [slot 3]
+      Block
+        VarDecl e  [slot 2]
+          Int 3
+        ExprStmt
+          Assign b  [slot 1]
+            Binary +
+              Var b  [slot 1]
+              Var e  [slot 2]
+      Block
+        VarDecl b  [slot 2]
+          Int 9
+        ExprStmt
+          Assign a  [slot 0]
+            Var b  [slot 2]
+      Return
+        Binary +
+          Var a  [slot 0]
+          Var b  [slot 1]
+  Function int main()  [locals 0]
+    Block
+      Return
+        Call outer  [fn 0]
+          Int 1

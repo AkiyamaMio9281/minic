@@ -47,6 +47,10 @@ struct IntLiteral : Expr {
 struct Variable : Expr {
     std::string name;
 
+    // Filled in by semantic analysis: the local slot this name resolves
+    // to. -1 until then, which is why --ast prints no slot.
+    int slot = -1;
+
     Variable(int ln, std::string n)
         : Expr(Kind::Variable, ln), name(std::move(n)) {}
 };
@@ -76,6 +80,9 @@ struct Assign : Expr {
     std::string name;
     ExprPtr value;
 
+    // Filled in by semantic analysis, as in Variable.
+    int slot = -1;
+
     Assign(int ln, std::string n, ExprPtr v)
         : Expr(Kind::Assign, ln), name(std::move(n)), value(std::move(v)) {}
 };
@@ -83,6 +90,9 @@ struct Assign : Expr {
 struct Call : Expr {
     std::string callee;
     std::vector<ExprPtr> args;
+
+    // Filled in by semantic analysis: index into Program::functions.
+    int target = -1;
 
     Call(int ln, std::string c)
         : Expr(Kind::Call, ln), callee(std::move(c)) {}
@@ -117,6 +127,9 @@ using StmtPtr = std::unique_ptr<Stmt>;
 struct VarDecl : Stmt {
     std::string name;
     ExprPtr init;
+
+    // Filled in by semantic analysis: the slot allocated to this variable.
+    int slot = -1;
 
     VarDecl(int ln, std::string n, ExprPtr i)
         : Stmt(Kind::VarDecl, ln), name(std::move(n)), init(std::move(i)) {}
@@ -180,6 +193,13 @@ struct Function {
     std::vector<Param> params;
     std::unique_ptr<Block> body;
     int line = 0;
+
+    // Filled in by semantic analysis: how many slots a call frame needs,
+    // parameters included. Slots are reused across sibling blocks, so this
+    // is the high-water mark rather than the number of declarations.
+    // -1 until analysis runs, which is how a function with no locals at
+    // all stays distinguishable from one that was never analyzed.
+    int localCount = -1;
 };
 
 struct Program {

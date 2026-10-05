@@ -1,0 +1,1 @@
+semantic error: line 2: 'f' returns void, so return takes no value

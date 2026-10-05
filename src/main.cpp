@@ -2,6 +2,7 @@
 #include "error.hpp"
 #include "lexer.hpp"
 #include "parser.hpp"
+#include "semantic.hpp"
 
 #include <fstream>
 #include <iomanip>
@@ -15,12 +16,15 @@ namespace {
 enum class Mode {
     Tokens,
     Ast,
+    Check,
 };
 
 const char* const USAGE =
-    "usage: minic [--tokens | --ast] <file.c>\n"
+    "usage: minic [--tokens | --ast | --check] <file.c>\n"
     "  --tokens   print the token stream\n"
-    "  --ast      print the syntax tree (default)\n";
+    "  --ast      parse, then print the syntax tree\n"
+    "  --check    also run semantic analysis, then print the tree with the\n"
+    "             slots and call targets it resolved (default)\n";
 
 bool readFile(const char* path, std::string& out) {
     std::ifstream file(path, std::ios::binary);
@@ -63,7 +67,7 @@ void dumpTokens(Lexer& lexer) {
 }  // namespace
 
 int main(int argc, char** argv) {
-    Mode mode = Mode::Ast;
+    Mode mode = Mode::Check;
     const char* path = nullptr;
 
     for (int i = 1; i < argc; ++i) {
@@ -73,6 +77,8 @@ int main(int argc, char** argv) {
             mode = Mode::Tokens;
         } else if (arg == "--ast") {
             mode = Mode::Ast;
+        } else if (arg == "--check") {
+            mode = Mode::Check;
         } else if (arg.empty() || arg[0] == '-' || path != nullptr) {
             std::cerr << USAGE;
             return 2;
@@ -100,7 +106,12 @@ int main(int argc, char** argv) {
             dumpTokens(lexer);
         } else {
             Parser parser(lexer);
-            const Program program = parser.parseProgram();
+            Program program = parser.parseProgram();
+
+            if (mode == Mode::Check) {
+                analyze(program);
+            }
+
             printAst(program, std::cout);
         }
     } catch (const CompileError& e) {

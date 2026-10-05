@@ -1,8 +1,20 @@
 #include "ast.hpp"
 
 #include <ostream>
+#include <string>
 
 namespace {
+
+// Semantic analysis writes slot numbers and call targets back into the
+// tree. Printing them only when they are set keeps --ast, which does not
+// run the analyzer, free of noise.
+std::string annotation(const char* label, int value) {
+    if (value < 0) {
+        return "";
+    }
+
+    return std::string("  [") + label + " " + std::to_string(value) + "]";
+}
 
 class AstPrinter {
 public:
@@ -39,7 +51,10 @@ private:
             out_ << function.params[i].name;
         }
 
-        out_ << ")\n";
+        out_ << ")"
+             << annotation("locals", function.localCount)
+             << "\n";
+
         stmt(*function.body, depth + 1);
     }
 
@@ -47,7 +62,8 @@ private:
         switch (stmt.kind) {
             case Stmt::Kind::VarDecl: {
                 const auto& decl = static_cast<const VarDecl&>(stmt);
-                indent(depth) << "VarDecl " << decl.name << "\n";
+                indent(depth) << "VarDecl " << decl.name
+                              << annotation("slot", decl.slot) << "\n";
 
                 if (decl.init) {
                     expr(*decl.init, depth + 1);
@@ -127,7 +143,8 @@ private:
 
             case Expr::Kind::Variable: {
                 const auto& var = static_cast<const Variable&>(expr);
-                indent(depth) << "Var " << var.name << "\n";
+                indent(depth) << "Var " << var.name
+                              << annotation("slot", var.slot) << "\n";
                 return;
             }
 
@@ -148,14 +165,16 @@ private:
 
             case Expr::Kind::Assign: {
                 const auto& assign = static_cast<const Assign&>(expr);
-                indent(depth) << "Assign " << assign.name << "\n";
+                indent(depth) << "Assign " << assign.name
+                              << annotation("slot", assign.slot) << "\n";
                 this->expr(*assign.value, depth + 1);
                 return;
             }
 
             case Expr::Kind::Call: {
                 const auto& call = static_cast<const Call&>(expr);
-                indent(depth) << "Call " << call.callee << "\n";
+                indent(depth) << "Call " << call.callee
+                              << annotation("fn", call.target) << "\n";
 
                 for (const ExprPtr& arg : call.args) {
                     this->expr(*arg, depth + 1);

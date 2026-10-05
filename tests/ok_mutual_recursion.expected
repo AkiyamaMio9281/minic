@@ -1,0 +1,37 @@
+Program
+  Function int even(n)  [locals 1]
+    Block
+      If
+        Binary ==
+          Var n  [slot 0]
+          Int 0
+        Block
+          Return
+            Int 1
+      Return
+        Call odd  [fn 1]
+          Binary -
+            Var n  [slot 0]
+            Int 1
+  Function int odd(n)  [locals 1]
+    Block
+      If
+        Binary ==
+          Var n  [slot 0]
+          Int 0
+        Block
+          Return
+            Int 0
+      Return
+        Call even  [fn 0]
+          Binary -
+            Var n  [slot 0]
+            Int 1
+  Function int main()  [locals 0]
+    Block
+      Return
+        Binary +
+          Call even  [fn 0]
+            Int 10
+          Call odd  [fn 1]
+            Int 7

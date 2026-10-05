@@ -1,29 +1,29 @@
 Program
-  Function void countdown(n)
+  Function void countdown(n)  [locals 1]
     Block
       While
         Binary >
-          Var n
+          Var n  [slot 0]
           Int 0
         Block
           ExprStmt
-            Assign n
+            Assign n  [slot 0]
               Binary -
-                Var n
+                Var n  [slot 0]
                 Int 1
       Return
-  Function int sign(x)
+  Function int sign(x)  [locals 1]
     Block
       If
         Binary >
-          Var x
+          Var x  [slot 0]
           Int 0
         Return
           Int 1
         Else
           If
             Binary <
-              Var x
+              Var x  [slot 0]
               Int 0
             Return
               Unary -
@@ -31,12 +31,12 @@ Program
             Else
               Return
                 Int 0
-  Function int dangling(a, b)
+  Function int dangling(a, b)  [locals 2]
     Block
       If
-        Var a
+        Var a  [slot 0]
         If
-          Var b
+          Var b  [slot 1]
           Return
             Int 1
           Else
@@ -44,32 +44,32 @@ Program
               Int 2
       Return
         Int 3
-  Function int main()
+  Function int main()  [locals 2]
     Block
-      VarDecl i
+      VarDecl i  [slot 0]
         Int 0
       Empty
       Block
-        VarDecl i
+        VarDecl i  [slot 1]
           Int 5
         Block
       While
         Binary <
-          Var i
+          Var i  [slot 0]
           Int 3
         ExprStmt
-          Assign i
+          Assign i  [slot 0]
             Binary +
-              Var i
+              Var i  [slot 0]
               Int 1
       ExprStmt
-        Call countdown
+        Call countdown  [fn 0]
           Binary +
-            Call sign
+            Call sign  [fn 1]
               Unary -
                 Int 4
-            Call dangling
+            Call dangling  [fn 2]
               Int 1
               Int 0
       Return
-        Var i
+        Var i  [slot 0]

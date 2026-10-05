@@ -1,0 +1,1 @@
+semantic error: line 6: 'noop' returns void, so its result cannot be used in an expression

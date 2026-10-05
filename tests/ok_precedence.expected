@@ -1,14 +1,14 @@
 Program
-  Function int main()
+  Function int main()  [locals 3]
     Block
-      VarDecl a
+      VarDecl a  [slot 0]
         Int 1
-      VarDecl b
+      VarDecl b  [slot 1]
         Int 2
-      VarDecl c
+      VarDecl c  [slot 2]
         Int 3
       ExprStmt
-        Assign a
+        Assign a  [slot 0]
           Binary -
             Binary +
               Int 1
@@ -17,48 +17,48 @@ Program
                 Int 3
             Int 4
       ExprStmt
-        Assign b
+        Assign b  [slot 1]
           Binary %
             Binary /
               Int 8
               Int 2
             Int 3
       ExprStmt
-        Assign c
+        Assign c  [slot 2]
           Binary *
             Binary +
               Int 1
               Int 2
             Int 3
       ExprStmt
-        Assign a
-          Assign b
-            Assign c
+        Assign a  [slot 0]
+          Assign b  [slot 1]
+            Assign c  [slot 2]
               Int 0
       ExprStmt
-        Assign c
+        Assign c  [slot 2]
           Binary *
             Unary -
-              Var a
+              Var a  [slot 0]
             Unary !
-              Var b
+              Var b  [slot 1]
       Return
         Binary ||
           Binary &&
             Binary <
-              Var a
-              Var b
+              Var a  [slot 0]
+              Var b  [slot 1]
             Binary <=
-              Var b
-              Var c
+              Var b  [slot 1]
+              Var c  [slot 2]
           Binary &&
             Binary !=
               Binary ==
-                Var a
-                Var c
+                Var a  [slot 0]
+                Var c  [slot 2]
               Int 0
             Binary >
               Unary -
                 Unary -
-                  Var a
+                  Var a  [slot 0]
               Int 0

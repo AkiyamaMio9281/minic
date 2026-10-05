@@ -1,5 +1,5 @@
 Program
-  Function int main()
+  Function int main()  [locals 0]
     Block
       Return
         Int 1
