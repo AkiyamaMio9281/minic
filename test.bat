@@ -1,6 +1,7 @@
 @echo off
 rem Runs every tests\*.c through minic.exe and compares stdout plus stderr
-rem with the matching .expected file.
+rem with the matching .expected file. Files named run_*.c are executed with
+rem --run; all other tests use the default semantic-check mode.
 rem
 rem   test.bat          run all tests
 rem   test.bat update   rewrite every .expected from the current output,
@@ -23,7 +24,11 @@ set /a passed=0
 set /a failed=0
 
 for %%f in (tests\*.c) do (
-    "%MINIC%" "%%f" > "!OUT!" 2>&1
+    set "ARGS="
+    set "NAME=%%~nf"
+    if /i "!NAME:~0,4!"=="run_" set "ARGS=--run"
+
+    "%MINIC%" !ARGS! "%%f" > "!OUT!" 2>&1
 
     if /i "%~1"=="update" (
         copy /y "!OUT!" "%%~dpnf.expected" >nul
