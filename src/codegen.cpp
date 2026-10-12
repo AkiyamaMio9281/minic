@@ -176,10 +176,10 @@ private:
                 return;
             }
 
-            case Exppr::Kind::Unary: {
+            case Expr::Kind::Unary: {
                 const auto& unary = static_cast<const Unary&>(expression);
                 compileExpr(*unary.operand);
-                emit(urary.op == TokenType::Minus ? OpCode::Neg : OpCode::Not, 0, unary.line);
+                emit(unary.op == TokenType::Minus ? OpCode::Neg : OpCode::Not, 0, unary.line);
                 return;
             }
 
