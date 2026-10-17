@@ -1,0 +1,1 @@
+semantic error: line 1: 'print' is a builtin, so a function cannot take that name

@@ -13,6 +13,11 @@ CompileError error(int line, const std::string& message) {
     return CompileError("semantic", line, message);
 }
 
+// The one builtin. It prints an integer and a newline, and yields no
+// value, so it is only useful as a statement.
+const char* const PRINT = "print";
+const std::size_t PRINT_ARITY = 1;
+
 // "1 argument" but "2 arguments".
 std::string count(std::size_t n, const char* noun) {
     return std::to_string(n) + " " + noun + (n == 1 ? "" : "s");
@@ -42,6 +47,13 @@ private:
     void collectFunctions() {
         for (std::size_t i = 0; i < program_.functions.size(); ++i) {
             const Function& function = program_.functions[i];
+
+            if (function.name == PRINT) {
+                throw error(
+                    function.line,
+                    "'print' is a builtin, so a function cannot take that name"
+                );
+            }
 
             if (!functions_.emplace(function.name, static_cast<int>(i)).second) {
                 throw error(
@@ -100,6 +112,10 @@ private:
 
         if (functions_.count(name) != 0) {
             throw error(line, "'" + name + "' is already the name of a function");
+        }
+
+        if (name == PRINT) {
+            throw error(line, "'print' is a builtin, so a variable cannot take that name");
         }
 
         const int slot = nextSlot_++;
@@ -280,13 +296,13 @@ private:
 
             case Expr::Kind::Call: {
                 auto& call = static_cast<Call&>(expr);
-                call.target = resolveCall(call);
+                resolveCall(call);
 
-                if (program_.functions[call.target].returnsVoid && !voidAllowed) {
+                if (yieldsNoValue(call) && !voidAllowed) {
                     throw error(
                         call.line,
                         "'" + call.callee +
-                            "' returns void, so its result cannot be used in an expression"
+                            "' returns no value, so it cannot be used in an expression"
                     );
                 }
 
@@ -299,7 +315,13 @@ private:
         }
     }
 
-    int resolveCall(const Call& call) const {
+    void resolveCall(Call& call) const {
+        if (call.callee == PRINT) {
+            checkArity(call, PRINT_ARITY);
+            call.resolution = Call::Resolution::Builtin;
+            return;
+        }
+
         const auto it = functions_.find(call.callee);
 
         if (it == functions_.end()) {
@@ -310,17 +332,28 @@ private:
             throw error(call.line, "no function named '" + call.callee + "'");
         }
 
-        const Function& callee = program_.functions[it->second];
+        checkArity(call, program_.functions[it->second].params.size());
+        call.resolution = Call::Resolution::UserFunction;
+        call.target = it->second;
+    }
 
-        if (call.args.size() != callee.params.size()) {
+    void checkArity(const Call& call, std::size_t expected) const {
+        if (call.args.size() != expected) {
             throw error(
                 call.line,
-                "'" + call.callee + "' takes " + count(callee.params.size(), "argument") +
+                "'" + call.callee + "' takes " + count(expected, "argument") +
                     " but was given " + std::to_string(call.args.size())
             );
         }
+    }
 
-        return it->second;
+    // print yields nothing, and neither does a void function.
+    bool yieldsNoValue(const Call& call) const {
+        if (call.resolution == Call::Resolution::Builtin) {
+            return true;
+        }
+
+        return program_.functions[call.target].returnsVoid;
     }
 
     // The slot of the variable whose initializer is being analyzed is the

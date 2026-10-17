@@ -29,6 +29,7 @@ const char* opcodeName(OpCode op) {
         case OpCode::Call: return "CALL";
         case OpCode::Return: return "RET";
         case OpCode::ReturnVoid: return "RET_VOID";
+        case OpCode::Print: return "PRINT";
     }
     return "?";
 }

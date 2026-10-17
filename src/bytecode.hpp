@@ -29,6 +29,7 @@ enum class OpCode {
     Call,
     Return,
     ReturnVoid,
+    Print,
 };
 
 struct Instruction {

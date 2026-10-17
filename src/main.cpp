@@ -98,8 +98,14 @@ int main(int argc, char** argv) {
                     printAst(program, std::cout);
                 } else {
                     const BytecodeProgram bytecode = generateBytecode(program);
-                    if (mode == Mode::Bytecode) printBytecode(bytecode, std::cout);
-                    else std::cout << run(bytecode) << '\n';
+                    if (mode == Mode::Bytecode) {
+                        printBytecode(bytecode, std::cout);
+                    } else {
+                        // print writes during the run, so the result
+                        // is written only once the run is over.
+                        const int result = run(bytecode, std::cout);
+                        std::cout << result << '\n';
+                    }
                 }
             }
         }

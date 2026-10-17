@@ -91,7 +91,17 @@ struct Call : Expr {
     std::string callee;
     std::vector<ExprPtr> args;
 
-    // Filled in by semantic analysis: index into Program::functions.
+    // Filled in by semantic analysis. print is a builtin with no Function
+    // behind it, so a resolved call is one of two different things.
+    enum class Resolution {
+        Unresolved,
+        UserFunction,
+        Builtin,
+    };
+
+    Resolution resolution = Resolution::Unresolved;
+
+    // Index into Program::functions when resolution is UserFunction.
     int target = -1;
 
     Call(int ln, std::string c)

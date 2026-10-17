@@ -173,8 +173,15 @@ private:
 
             case Expr::Kind::Call: {
                 const auto& call = static_cast<const Call&>(expr);
-                indent(depth) << "Call " << call.callee
-                              << annotation("fn", call.target) << "\n";
+                indent(depth) << "Call " << call.callee;
+
+                if (call.resolution == Call::Resolution::Builtin) {
+                    out_ << "  [builtin]";
+                } else {
+                    out_ << annotation("fn", call.target);
+                }
+
+                out_ << "\n";
 
                 for (const ExprPtr& arg : call.args) {
                     this->expr(*arg, depth + 1);

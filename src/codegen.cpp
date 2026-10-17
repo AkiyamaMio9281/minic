@@ -65,6 +65,9 @@ private:
             return true;
         }
         const Call& call = static_cast<const Call&>(expr);
+        if (call.resolution == Call::Resolution::Builtin) {
+            return false;
+        }
         return !program_.functions[static_cast<std::size_t>(call.target)].returnsVoid;
     }
 
@@ -227,7 +230,11 @@ private:
                 for (const ExprPtr& argument : call.args) {
                     compileExpr(*argument);
                 }
-                emit(OpCode::Call, call.target, call.line);
+                if (call.resolution == Call::Resolution::Builtin) {
+                    emit(OpCode::Print, 0, call.line);
+                } else {
+                    emit(OpCode::Call, call.target, call.line);
+                }
                 return;
             }
         }

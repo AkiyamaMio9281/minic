@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <limits>
+#include <ostream>
 #include <stdexcept>
 #include <vector>
 #include <utility>
@@ -12,7 +13,8 @@ namespace {
 
 class VirtualMachine {
 public:
-    explicit VirtualMachine(const BytecodeProgram& program) : program_(program) {}
+    VirtualMachine(const BytecodeProgram& program, std::ostream& out)
+        : program_(program), out_(out) {}
 
     int run() {
         if (program_.mainIndex < 0 || static_cast<std::size_t>(program_.mainIndex) >= program_.functions.size()) {
@@ -248,10 +250,15 @@ private:
             case OpCode::ReturnVoid:
                 returnVoid();
                 return;
+
+            case OpCode::Print:
+                out_ << pop(instruction.line) << '\n';
+                return;
         }
     }
 
     const BytecodeProgram& program_;
+    std::ostream& out_;
     std::vector<int> stack_;
     std::vector<Frame> frames_;
     int result_ = 0;
@@ -259,6 +266,6 @@ private:
 
 }
 
-int run(const BytecodeProgram& program) {
-    return VirtualMachine(program).run();
+int run(const BytecodeProgram& program, std::ostream& out) {
+    return VirtualMachine(program, out).run();
 }
