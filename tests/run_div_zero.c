@@ -1,0 +1,5 @@
+int main() {
+    int zero = 0;
+    print(1 / zero);
+    return 0;
+}
