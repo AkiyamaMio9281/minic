@@ -489,8 +489,13 @@ test_llvm.bat
 
 Every `tests\run_*.c` is compiled through the LLVM backend and its output
 compared against the same `.expected` file the VM is held to, at `-O0`
-and at `-O2`. 15 programs at two optimization levels is 30 checks, and all
-30 match the VM byte for byte.
+and at `-O2`. 18 programs at two optimization levels is 36 checks, and all
+36 match the VM byte for byte.
+
+Every trap kind has a test that reaches it. The trap messages live in
+`runtime/minic_rt.c`, indexed by a number `llvm_codegen.cpp` passes in, so
+a mismatch between the two files would print the wrong message without
+failing to compile; swapping two entries in that table fails four checks.
 
 Running both levels is what makes this worth doing. If a program's output
 changes between `-O0` and `-O2`, the generated IR almost certainly
@@ -587,7 +592,7 @@ Test prefixes indicate their purpose:
 | `semantic_` | Semantic-analysis errors |
 | `run_` | End-to-end compilation and execution, on both backends |
 
-The execution tests cover arithmetic, chained assignment, loops, recursion, short-circuit evaluation, `void` calls, function fallthrough behavior, integer overflow, division by zero, and the two signed-division edge cases around `INT_MIN`. `tests/gcd.c` is the main example program.
+The execution tests cover arithmetic, chained assignment, loops, recursion, short-circuit evaluation (including right operands with side effects that must not run), `void` calls, function fallthrough behavior, integer overflow, negation overflow, division and remainder by zero, and the two signed-division edge cases around `INT_MIN`. `tests/gcd.c` is the main example program.
 
 The same `run_*` tests and the same `.expected` files are used to check the LLVM backend, which is what makes the two backends comparable:
 
