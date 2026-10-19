@@ -7,3 +7,6 @@
 
 # Visual Studio / VS Code local state
 .vs/
+
+# Local scratch notes, not part of the project
+notes/
