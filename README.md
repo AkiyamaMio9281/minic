@@ -38,6 +38,8 @@ The core compiler is complete:
 - [x] Stack-machine bytecode generation
 - [x] Bytecode disassembler
 - [x] Stack virtual machine
+- [x] Second backend emitting textual LLVM IR, compiled by clang
+- [x] Differential testing of both backends at -O0 and -O2
 - [x] Function calls and recursion
 - [x] Short-circuit `&&` and `||`
 - [x] `print` built-in for integer output
@@ -64,10 +66,11 @@ The script compiles every `.cpp` file under `src\` and produces `minic.exe` in t
 ## Usage
 
 ```text
-usage: minic [--tokens | --ast | --check | --bytecode | --run] <file.c>
+usage: minic [--tokens | --ast | --check | --emit-llvm | --bytecode | --run] <file.c>
   --tokens    print the token stream
   --ast       parse, then print the syntax tree
   --check     run semantic analysis, then print the resolved tree (default)
+  --emit-llvm emit textual LLVM IR for clang to compile
   --bytecode  compile and print stack-machine bytecode
   --run       compile and execute the program, then print main's result
 ```
@@ -416,6 +419,120 @@ syntax error: line 2: expected ';' after variable declaration, found 'return'
 
 The compiler exits with status `1` for source-program errors and status `2` for invalid command-line usage.
 
+## LLVM Backend
+
+The front end has a second backend that emits textual LLVM IR, which clang
+compiles to a native executable. Both backends are driven from the same
+AST after the same semantic analysis:
+
+```text
+MiniC source -> lexer -> parser -> semantic analysis
+                                     |-- codegen.cpp      -> bytecode -> VM
+                                     +-- llvm_codegen.cpp -> LLVM IR  -> clang -> native exe
+```
+
+```bat
+minic.exe --emit-llvm bench\fib.c > fib.ll
+clang -O2 -Wno-override-module fib.ll runtime\minic_rt.c -o fib.exe
+fib.exe
+```
+
+The IR carries no target triple, so the same `.ll` works on any host and
+clang supplies its own. `-Wno-override-module` silences the note clang
+prints about that. Write the `.ll` with `cmd`, not with PowerShell's `>`,
+which prepends a byte-order mark that clang rejects at line 1.
+
+LLVM libraries are not linked into the compiler. The backend writes IR as
+text, which is the same IR the C++ API builds, and keeps the build
+dependency at MSVC plus clang.
+
+### What the lowering does
+
+- **Locals become `alloca`, not SSA values.** Each slot that semantic
+  analysis numbered becomes one `alloca i32` in the entry block, and reads
+  and writes become `load` and `store`. Promotion to SSA is left to the
+  optimizer, which is what a production front end does. See
+  [docs/ssa.md](docs/ssa.md) for the IR before and after.
+- **`&&` and `||` become branches and a `phi`.** This is the one place the
+  backend constructs SSA by hand, because short-circuiting is control
+  flow: the right operand must not be evaluated when the left one settles
+  the answer. The incoming blocks of the `phi` are recorded as the
+  operands are emitted rather than assumed, since either operand may open
+  blocks of its own.
+- **Arithmetic is checked, so native code traps where the VM traps.**
+  `+`, `-` and `*` go through `llvm.sadd/ssub/smul.with.overflow.i32` and
+  branch to a trap on overflow. `/` tests for a zero divisor and for
+  `INT_MIN / -1`, in that order, because that is the order the VM reports
+  them in. `%` tests for zero, and produces `INT_MIN % -1` as zero through
+  a `phi` without ever executing `srem`, whose result for those operands
+  is undefined in LLVM.
+- **Running off the end of a function** is `ret void` for a `void`
+  function, `ret i32 0` for `main`, and a trap naming the function for
+  anything else, which is what the VM does.
+- **Dead code after a terminator** goes into a fresh block with no
+  predecessors. LLVM rejects instructions that follow a terminator in the
+  same block, and a statement after `return`, or after an `if` whose arms
+  all return, is exactly that case.
+
+Runtime support lives in `runtime/minic_rt.c`: `print`, the trap
+reporting, and the real `main`, which calls `mc_main` and prints what it
+returned. Its messages are copied verbatim from `vm.cpp`, and it flushes
+stdout before writing to stderr so that output produced before a trap
+cannot appear after the error. The VM gets that ordering for free, since
+C++ ties `cerr` to `cout`.
+
+### Differential testing
+
+```bat
+test_llvm.bat
+```
+
+Every `tests\run_*.c` is compiled through the LLVM backend and its output
+compared against the same `.expected` file the VM is held to, at `-O0`
+and at `-O2`. 15 programs at two optimization levels is 30 checks, and all
+30 match the VM byte for byte.
+
+Running both levels is what makes this worth doing. If a program's output
+changes between `-O0` and `-O2`, the generated IR almost certainly
+contains undefined behavior that the optimizer is entitled to exploit.
+`tests/run_rem_int_min.c` exists for exactly that reason: `INT_MIN % -1`
+is zero in the VM and undefined for `srem`, so a backend that emitted a
+bare `srem` would pass at `-O0` and could fail at `-O2`.
+
+### Performance
+
+`bench/fib.c` computes `fib(32)` recursively, about 7 million calls.
+Median of 5 runs, with the measured process startup of an empty program
+subtracted:
+
+| | Wall clock | Compute only | Relative |
+| --- | --- | --- | --- |
+| VM | 2249.5 ms | 2245.1 ms | 1x |
+| clang -O0 | 11.6 ms | 7.5 ms | 299x |
+| clang -O2 | 10.3 ms | 6.2 ms | 362x |
+
+Startup is 4.4 ms for the VM and 4.1 ms for a native executable, which is
+why the wall-clock ratios understate the difference.
+
+The gap is larger than interpretation overhead alone explains, and the
+reason is measurable rather than mysterious: `Frame` in `vm.cpp` holds its
+locals in a `std::vector<int>` that `pushFrame` fills with `assign`, so
+**every MiniC call costs a heap allocation and a free**. A flat locals
+stack addressed by a frame base would remove it. The rest is what an
+interpreter pays anyway: dispatch per instruction, operand-stack traffic,
+and the same arithmetic checks the native code gets as a branch the
+hardware predicts.
+
+`-O0` and `-O2` are close here because the function is tiny and dominated
+by call overhead, which `-O0` does not make much worse.
+
+### Known difference
+
+The VM has no call-depth limit, so recursion there is bounded only by
+memory, while the native executable is bounded by the process stack.
+Programs that recurse extremely deeply behave differently between the two
+backends, and none of the differential tests contain one.
+
 ## Intentional Limitations
 
 MiniC does not currently support:
@@ -468,9 +585,17 @@ Test prefixes indicate their purpose:
 | `lex_` | Lexer errors |
 | `syntax_` | Parser errors |
 | `semantic_` | Semantic-analysis errors |
-| `run_` | End-to-end compilation and VM execution |
+| `run_` | End-to-end compilation and execution, on both backends |
 
-The execution tests cover arithmetic, chained assignment, loops, recursion, short-circuit evaluation, `void` calls, function fallthrough behavior, and integer overflow. `tests/gcd.c` is the main example program.
+The execution tests cover arithmetic, chained assignment, loops, recursion, short-circuit evaluation, `void` calls, function fallthrough behavior, integer overflow, division by zero, and the two signed-division edge cases around `INT_MIN`. `tests/gcd.c` is the main example program.
+
+The same `run_*` tests and the same `.expected` files are used to check the LLVM backend, which is what makes the two backends comparable:
+
+```bat
+test_llvm.bat
+```
+
+See [LLVM Backend](#llvm-backend) for what it does.
 
 ## Project Structure
 
@@ -481,6 +606,10 @@ The execution tests cover arithmetic, chained assignment, loops, recursion, shor
 | `src/ast.hpp`, `src/ast.cpp` | AST node definitions and tree printer |
 | `src/parser.hpp`, `src/parser.cpp` | Recursive-descent parser |
 | `src/semantic.hpp`, `src/semantic.cpp` | Scopes, name resolution, semantic checks, and slot allocation |
+| `src/llvm_codegen.hpp`, `src/llvm_codegen.cpp` | Second backend: AST to textual LLVM IR |
+| `runtime/minic_rt.c` | Native runtime for the LLVM backend: print, traps, and the real main |
+| `bench/` | Benchmark programs |
+| `docs/ssa.md` | The IR before and after stack slots are promoted |
 | `src/bytecode.hpp`, `src/bytecode.cpp` | Bytecode instruction definitions and disassembly |
 | `src/codegen.hpp`, `src/codegen.cpp` | AST-to-bytecode lowering |
 | `src/vm.hpp`, `src/vm.cpp` | Stack virtual machine |

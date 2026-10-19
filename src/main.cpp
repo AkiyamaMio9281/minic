@@ -3,6 +3,7 @@
 #include "codegen.hpp"
 #include "error.hpp"
 #include "lexer.hpp"
+#include "llvm_codegen.hpp"
 #include "parser.hpp"
 #include "semantic.hpp"
 #include "vm.hpp"
@@ -20,15 +21,17 @@ enum class Mode {
     Tokens,
     Ast,
     Check,
+    EmitLlvm,
     Bytecode,
     Run,
 };
 
 const char* const USAGE =
-    "usage: minic [--tokens | --ast | --check | --bytecode | --run] <file.c>\n"
+    "usage: minic [--tokens | --ast | --check | --emit-llvm | --bytecode | --run] <file.c>\n"
     "  --tokens    print the token stream\n"
     "  --ast       parse, then print the syntax tree\n"
     "  --check     run semantic analysis, then print the resolved tree (default)\n"
+    "  --emit-llvm emit textual LLVM IR for clang to compile\n"
     "  --bytecode  compile and print stack-machine bytecode\n"
     "  --run       compile and execute the program, then print main's result\n";
 
@@ -64,6 +67,7 @@ int main(int argc, char** argv) {
         if (arg == "--tokens") mode = Mode::Tokens;
         else if (arg == "--ast") mode = Mode::Ast;
         else if (arg == "--check") mode = Mode::Check;
+        else if (arg == "--emit-llvm") mode = Mode::EmitLlvm;
         else if (arg == "--bytecode") mode = Mode::Bytecode;
         else if (arg == "--run") mode = Mode::Run;
         else if (arg.empty() || arg[0] == '-' || path != nullptr) {
@@ -96,6 +100,8 @@ int main(int argc, char** argv) {
                 analyze(program);
                 if (mode == Mode::Check) {
                     printAst(program, std::cout);
+                } else if (mode == Mode::EmitLlvm) {
+                    emitLlvm(program, std::cout);
                 } else {
                     const BytecodeProgram bytecode = generateBytecode(program);
                     if (mode == Mode::Bytecode) {
